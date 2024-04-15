@@ -55,6 +55,7 @@ void main()
     // - yolov8 yields multiple detections for the same object. We can consolidate the detections
     //   for the same object by computing distances between the box centroids. This situation can be observed
     //   on the cat_dog.jpg, since the dog detected multiple times.
+    //   reaad for a post processing approach https://github.com/ultralytics/ultralytics/issues/5811#issuecomment-1771565130
     foreach(box; boxes){
         fig.drawRectangle([PlotPoint(box[0], box[1]), PlotPoint(box[2], box[3])], plotBlue, 2.0f);
         fig.drawText(fontSet, classNames[cast(ulong)box[4]], PlotPoint(cast(float)box[0], cast(float)box[1]),
