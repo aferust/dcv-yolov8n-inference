@@ -1,0 +1,37 @@
+{
+	"authors": [
+		"user"
+	],
+	"copyright": "Copyright © 2023, Ferhat Kurtulmuş",
+	"description": "Use DCV and onnx runtime to perform yolov8n inference",
+	"license": "boost 1.0",
+	"name": "yolov8ninfer",
+	"dependencies": {
+		"dcv:core": {
+			"repository": "git+https://github.com/libmir/dcv",
+			"version": "26a82d4"
+		},
+		"dcv:plot": {
+			"repository": "git+https://github.com/libmir/dcv",
+			"version": "26a82d4"
+		},
+		"dcv:imageio": {
+			"repository": "git+https://github.com/libmir/dcv",
+			"version": "26a82d4"
+		},
+		"bindbc-onnxruntime": {"repository": "git+https://github.com/aferust/bindbc-onnxruntime.git", "version": "~master"} 
+	},
+	"comment-dflags": [
+		"-P-ID:/developer_tools/onnxruntime-win-x64-1.13.1/include",
+		"-L-LD:/developer_tools/onnxruntime-win-x64-1.13.1/lib"
+	],
+	"stringImportPaths": [
+		"fonts"
+	],
+	"subConfigurations": {
+		"dcv:plot": "use-glfw-d"
+	},
+	"comment-versions": [
+		"WITH_CUDA"
+	]
+}
