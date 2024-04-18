@@ -27,7 +27,7 @@ void main()
 
     auto impr = preprocess(imSlice);
 
-    //auto fig = imshow((impr.transposed!(1, 2, 0) * 255).slice, "detection"); // letterbox image that we feed to the network
+    //auto fig = imshow((impr.transposed!(1, 2, 0) * 255).rcslice, "detection"); // letterbox image that we feed to the network
     auto fig = imshow(imSlice, "detection"); // show the original image and use the scale for box coords
     auto fontSet = createFontSet(font, 30); // fontSet needs an opengl context, so we call it after imshow
 
@@ -39,7 +39,7 @@ void main()
 
     scope Slice!(float*, 3) outSlice = outPtr[0..numberOfelements].sliced(outDims[0], outDims[1], outDims[2]); 
 
-    auto boxes = extractBoxCoordinates(outSlice, 0.50f).data;
+    scope boxes = extractBoxCoordinates(outSlice, 0.50f).data;
     
     // - here we use opengl under the hood for drawing rectangles and text.
     //   we can write some image modifiers to directly write geometric primitives on the image data
