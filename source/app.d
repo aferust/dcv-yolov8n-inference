@@ -27,10 +27,6 @@ void main()
 
     auto impr = preprocess(imSlice);
 
-    //auto fig = imshow((impr.transposed!(1, 2, 0) * 255).rcslice, "detection"); // letterbox image that we feed to the network
-    auto fig = imshow(imSlice, "detection"); // show the original image and use the scale for box coords
-    auto fontSet = createFontSet(font, 30); // fontSet needs an opengl context, so we call it after imshow
-
     scope float* outPtr;
     long[3] outDims;
     size_t numberOfelements;
@@ -41,21 +37,21 @@ void main()
 
     scope boxes = extractBoxCoordinates(outSlice, 0.50f).data;
     
-    // - here we use opengl under the hood for drawing rectangles and text.
-    //   we can write some image modifiers to directly write geometric primitives on the image data
     // - yolov8 yields multiple detections for the same object. We can consolidate the detections
     //   for the same object by computing distances between the box centroids. This situation can be observed
     //   on the cat_dog.jpg, since the dog detected multiple times.
     //   reaad for a post processing approach https://github.com/ultralytics/ultralytics/issues/5811#issuecomment-1771565130
     foreach(box; boxes){
-        fig.drawRectangle([PlotPoint(box[0], box[1]), PlotPoint(box[2], box[3])], plotBlue, 2.0f);
-        fig.drawText(fontSet, classNames[cast(ulong)box[4]], PlotPoint(cast(float)box[0], cast(float)box[1]),
-                    0.0f, plotGreen);
+        putRectangleHollow(imSlice, [APoint(box[0], box[1]), APoint(box[2], box[3])], aBlue, 2);
+        putRectangleSolid(imSlice, [APoint(box[0], box[1]), APoint(box[2], box[3])], [255,0,0,10]);
+        putText(imSlice, font, classNames[cast(ulong)box[4]], APoint(cast(float)box[0], cast(float)box[1]), 30, aGreen);
+
     }
     
-    // imSliceWithAnnotations is ref counted
-    auto imSliceWithAnnotations = fig.plot2imslice(); // get the data as a mir.rcslice from the rendered opengl context
-    imwrite(imSliceWithAnnotations, ImageFormat.IF_RGB, "cat_dog_result.jpg"); // write the result on the disk
+    //imshow((impr.transposed!(1, 2, 0) * 255).rcslice, "detection"); // letterbox image that we feed to the network
+
+    imshow(imSlice, "detection"); // show the original image and use the scale for box coords
+    imwrite(imSlice, ImageFormat.IF_RGB, "cat_dog_result.jpg"); // write the result on the disk
 
     waitKey();   
 }
