@@ -18,12 +18,14 @@
 		"dcv:imageio": {
 			"repository": "git+https://github.com/libmir/dcv",
 			"version": "26a82d4"
-		},
-		"bindbc-onnxruntime": {"repository": "git+https://github.com/aferust/bindbc-onnxruntime.git", "version": "~master"} 
+		}
 	},
-	"comment-dflags": [
+	"dflags": [
 		"-P-ID:/developer_tools/onnxruntime-win-x64-1.13.1/include",
 		"-L-LD:/developer_tools/onnxruntime-win-x64-1.13.1/lib"
+	],
+	"libs": [
+		"onnxruntime"
 	],
 	"stringImportPaths": [
 		"fonts"

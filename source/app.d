@@ -9,21 +9,13 @@ import dcv.imgproc;
 import dcv.plot;
 import dcv.imageio;
 
-import bindbc.onnxruntime;
+import onnxruntime; // use importC
 
 import mir.ndslice;
 import mir.appender;
 
 void main()
 {
-    // if you use importC, delete loadONNXRuntime
-    const support = loadONNXRuntime();
-    if (support == ONNXRuntimeSupport.noLibrary /*|| support == ONNXRuntimeSupport.badLibrary*/)
-    {
-        writeln("Please download library from https://github.com/microsoft/onnxruntime/releases");
-        return;
-    }
-    
     auto yolov8ninfer = ORTContextYOLOV8N("yolov8n.onnx" /*, OrtLoggingLevel.ORT_LOGGING_LEVEL_VERBOSE*/);
 
     auto font = TtfFont(cast(ubyte[])import("Nunito-Regular.ttf"));
@@ -39,14 +31,13 @@ void main()
     auto fig = imshow(imSlice, "detection"); // show the original image and use the scale for box coords
     auto fontSet = createFontSet(font, 30); // fontSet needs an opengl context, so we call it after imshow
 
-    float* outPtr;
+    scope float* outPtr;
     long[3] outDims;
     size_t numberOfelements;
+    // foreach(i; 0..50) // if you use a GPU backend warm up the GPU before entering into any video loop
     yolov8ninfer.infer(impr, outPtr, outDims, numberOfelements);
-    scope(exit) yolov8ninfer.freeOutInfer();
 
-    // the data will be freed with freeOutInfer. outSlice is just a slice shell over the data (outPtr)
-    Slice!(float*, 3) outSlice = outPtr[0..numberOfelements].sliced(outDims[0], outDims[1], outDims[2]); 
+    scope Slice!(float*, 3) outSlice = outPtr[0..numberOfelements].sliced(outDims[0], outDims[1], outDims[2]); 
 
     auto boxes = extractBoxCoordinates(outSlice, 0.50f).data;
     
@@ -81,7 +72,7 @@ struct ORTContextYOLOV8N {
         const(char)*[1] input_node_names;
         const(char)*[1] output_node_names;
     }
-
+    
     this(in wchar[] networkFilePath, OrtLoggingLevel LOGlevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR)
     {
         // slower with : OrtLoggingLevel.ORT_LOGGING_LEVEL_VERBOSE
@@ -97,10 +88,11 @@ struct ORTContextYOLOV8N {
         ort.SetSessionGraphOptimizationLevel(session_options, GraphOptimizationLevel.ORT_ENABLE_ALL);
         ort.SetSessionExecutionMode(session_options, ExecutionMode.ORT_PARALLEL);
 
-        // with a proper linkage you can use GPU accel with different backends
+        // with a proper linkage you can use hardware accel with different backends
         //checkStatus(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options, 0));
+        //checkStatus(OrtSessionOptionsAppendExecutionProvider_CPU(session_options, 0));
 
-        checkStatus(ort.CreateSession(env, networkFilePath.ptr, session_options, &session));
+        checkStatus(ort.CreateSession(env, cast(const(ushort)*)networkFilePath.ptr, session_options, &session));
 
         OrtAllocator* allocator; // https://onnxruntime.ai/docs/api/c/struct_ort_api.html#a8dec797ae52ee1a681e4f88be1fb4bb3
         checkStatus(ort.GetAllocatorWithDefaultOptions(&allocator)); // allocator should NOT be freed according to docs
@@ -124,7 +116,8 @@ struct ORTContextYOLOV8N {
         _free();
     }
     
-    void _free(){
+    private void _free(){
+        freeOutInfer();
         ort.ReleaseEnv(env);
         ort.ReleaseSessionOptions(session_options);
         ort.ReleaseSession(session);
@@ -139,7 +132,7 @@ struct ORTContextYOLOV8N {
             auto msg = ort.GetErrorMessage(status);
             printf("%s\n", msg);
             ort.ReleaseStatus(status);
-            exit(-1);
+            exit(-1); // throw an exception if you run this on a server
         }
     }
 
@@ -152,6 +145,8 @@ struct ORTContextYOLOV8N {
         // outDims for yolov8 should be 1 84 8400.
 
         import core.stdc.stdlib : malloc, free;
+
+        freeOutInfer();
 
         OrtValue*[1] input_tensor;
 
@@ -189,12 +184,13 @@ struct ORTContextYOLOV8N {
 
         free(cast(void*)dims0.ptr);
     }
-
+    
+    private
     /++
         must be called after each call of infer
     +/
     void freeOutInfer(){
-        if(output_tensors[0]){
+        if(output_tensors[0] !is null){
             ort.ReleaseValue(output_tensors[0]);
             output_tensors[0] = null;
         }
@@ -202,6 +198,8 @@ struct ORTContextYOLOV8N {
 }
 
 float scale;
+
+@nogc nothrow:
 
 auto letterbox_image(InputImg)(InputImg image, size_t h, size_t w){
     import std.algorithm.comparison : min;
@@ -214,7 +212,7 @@ auto letterbox_image(InputImg)(InputImg image, size_t h, size_t w){
     
     auto resized = resize(image, [nh, nw]);
     
-    auto new_image = slice!ubyte([h, w, 3], 128);
+    auto new_image = rcslice!ubyte([h, w, 3], 128);
     new_image[0..nh, 0..nw, 0..$] = resized[0..nh, 0..nw, 0..$];
     
     //imshow(new_image, ImageFormat.IF_RGB); waitKey();
@@ -235,7 +233,7 @@ auto preprocess(InputImg)(InputImg img){
     //blob[0, 0..3, 0..640, 0..640] = image_data_t[0..3, 0..640, 0..640];
 
     //return blob;
-    return image_data_t.slice;
+    return image_data_t.rcslice;
 }
 
 
