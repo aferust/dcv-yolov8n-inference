@@ -9,15 +9,15 @@
 	"dependencies": {
 		"dcv:core": {
 			"repository": "git+https://github.com/libmir/dcv",
-			"version": "5dc3601"
+			"version": "51c1147"
 		},
 		"dcv:plot": {
 			"repository": "git+https://github.com/libmir/dcv",
-			"version": "5dc3601"
+			"version": "51c1147"
 		},
 		"dcv:imageio": {
 			"repository": "git+https://github.com/libmir/dcv",
-			"version": "5dc3601"
+			"version": "51c1147"
 		}
 	},
 	"dflags": [

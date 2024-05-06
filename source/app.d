@@ -11,7 +11,7 @@ import dcv.imageio;
 
 import onnxruntime; // use importC
 
-import mir.ndslice;
+import mir.ndslice, mir.rc;
 import mir.appender;
 
 void main()
@@ -25,7 +25,7 @@ void main()
 
     Slice!(ubyte*, 3) imSlice = img.sliced; // will be freed with the previous destroyFree(img)
 
-    auto impr = preprocess(imSlice);
+    auto impr = letterBoxAndPreprocess(imSlice);//preprocess(imSlice);
 
     scope float* outPtr;
     long[3] outDims;
@@ -196,7 +196,7 @@ struct ORTContextYOLOV8N {
 float scale;
 
 @nogc nothrow:
-
+/+
 auto letterbox_image(InputImg)(InputImg image, size_t h, size_t w){
     import std.algorithm.comparison : min;
 
@@ -231,24 +231,47 @@ auto preprocess(InputImg)(InputImg img){
     //return blob;
     return image_data_t.rcslice;
 }
++/
 
+Slice!(RCI!float, 3) letterBoxAndPreprocess(InputSlice)(InputSlice img){
+    import std.algorithm.comparison : min;
+
+    static assert(InputSlice.N == 3, "only RGB color images are supported");
+
+    size_t w = 640;
+    size_t h = 640;
+
+    auto iw = img.shape[1];
+    auto ih = img.shape[0];
+    scale = min((cast(float)w)/iw, (cast(float)h)/ih);
+    auto nw = cast(int)(iw*scale);
+    auto nh = cast(int)(ih*scale);
+    
+    auto resized = resize(img, [nh, nw]);
+    
+    auto boxed_image = rcslice!float([h, w, 3], 128.0f); // allocates
+    boxed_image[0..nh, 0..nw, 0..$] = resized[0..nh, 0..nw, 0..$].as!float; // assign values from a lazy iter 
+    
+    auto image_data_t = (boxed_image / 255.0f).transposed!(2, 0, 1); // lazy
+
+    return image_data_t.rcslice; // allocates from the lazy slice
+
+}
 
 scope auto extractBoxCoordinates(S)(auto ref S outSlice, float confidenceThreshold) {
     import mir.algorithm.iteration : minIndex, maxIndex;
     import std.array : staticArray;
     import core.lifetime : move;
 
-    //writeln("ws ", wscale, " hs ", hscale);
     auto boxes = scopedBuffer!(float[5]);
 
     foreach (i; 0 .. outSlice.shape[2]) {
         auto classProbabilities = outSlice[0, 4 .. $, i];
 
-        auto minClassLoc = classProbabilities.minIndex[0];
+        //auto minClassLoc = classProbabilities.minIndex[0];
         auto maxClassLoc = classProbabilities.maxIndex[0];
-        auto minScore = classProbabilities[minClassLoc];
+        //auto minScore = classProbabilities[minClassLoc];
         auto maxScore = classProbabilities[maxClassLoc];
-        //classProbabilities.length.writeln;
 
         if (maxScore > confidenceThreshold) {
             // Object detected with confidence higher than the threshold
@@ -259,9 +282,8 @@ scope auto extractBoxCoordinates(S)(auto ref S outSlice, float confidenceThresho
             auto x = outSlice[0, 0, i] - 0.5f * width;
             auto y = outSlice[0, 1, i] - 0.5f * height;
             
-            // Store the bounding box coordinates
-            // use scaling if you precisely tune box coordinates
-            boxes.put([x/scale, y/scale, (x+width)/scale, (y+height)/scale, maxClassLoc].staticArray);
+            // only one scale value is enough with a letterbox image.
+            boxes.put([x/scale, y/scale, (x+width)/scale, (y+height)/scale, maxScore].staticArray);
         }
     }
     return boxes.move;
