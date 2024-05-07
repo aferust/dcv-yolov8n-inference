@@ -263,7 +263,7 @@ scope auto extractBoxCoordinates(S)(auto ref S outSlice, float confidenceThresho
     import std.array : staticArray;
     import core.lifetime : move;
 
-    auto boxes = scopedBuffer!(float[5]);
+    auto boxes = scopedBuffer!(float[6]);
 
     foreach (i; 0 .. outSlice.shape[2]) {
         auto classProbabilities = outSlice[0, 4 .. $, i];
@@ -283,7 +283,7 @@ scope auto extractBoxCoordinates(S)(auto ref S outSlice, float confidenceThresho
             auto y = outSlice[0, 1, i] - 0.5f * height;
             
             // only one scale value is enough with a letterbox image.
-            boxes.put([x/scale, y/scale, (x+width)/scale, (y+height)/scale, maxScore].staticArray);
+            boxes.put([x/scale, y/scale, (x+width)/scale, (y+height)/scale, maxClassLoc, maxScore].staticArray);
         }
     }
     return boxes.move;
