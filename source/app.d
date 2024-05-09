@@ -99,7 +99,7 @@ struct ORTContextYOLOV8N {
 
         input_node_names = ["images".ptr];
         
-        { // We can infer input image shapes from the network file
+        { // We can infer input image shape from the network file
             OrtTypeInfo* input_type_info;
             ort.SessionGetInputTypeInfo(session, 0, &input_type_info);
 
@@ -113,7 +113,7 @@ struct ORTContextYOLOV8N {
             ort.GetDimensions(input_shape_info, input_dims, num_dims);
 
             // Output input image size
-            printf("Input image size: Height=%ld, Width=%ld, Channels=%ld\n", 
+            printf("Input image size: Height=%lld, Width=%lld, Channels=%lld\n", 
                 input_dims[1], input_dims[2], input_dims[3]);
             
             free(input_dims);
