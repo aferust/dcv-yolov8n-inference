@@ -98,9 +98,26 @@ struct ORTContextYOLOV8N {
         checkStatus(ort.SessionGetInputCount(session, &num_input_nodes));
 
         input_node_names = ["images".ptr];
-        long[1] input_node_dims = [4];
-        long[1] output_node_dims = [3];
+        
+        { // We can infer input image shapes from the network file
+            OrtTypeInfo* input_type_info;
+            ort.SessionGetInputTypeInfo(session, 0, &input_type_info);
 
+            // Get input node shape
+            OrtTensorTypeAndShapeInfo* input_shape_info;
+            ort.CastTypeInfoToTensorInfo(input_type_info, &input_shape_info);
+
+            size_t num_dims;
+            ort.GetDimensionsCount(input_shape_info, &num_dims);
+            long* input_dims = cast(long*)malloc(num_dims * long.sizeof);
+            ort.GetDimensions(input_shape_info, input_dims, num_dims);
+
+            // Output input image size
+            printf("Input image size: Height=%ld, Width=%ld, Channels=%ld\n", 
+                input_dims[1], input_dims[2], input_dims[3]);
+            
+            free(input_dims);
+        }
         checkStatus(ort.CreateCpuMemoryInfo(OrtAllocatorType.OrtArenaAllocator,
             OrtMemType.OrtMemTypeDefault, &memory_info));
         
